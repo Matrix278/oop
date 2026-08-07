@@ -24,9 +24,9 @@ For every lesson:
 |---|---|---|---|
 | 1 | Things and the plans used to create them | Classes and objects | Done |
 | 2 | What a thing remembers | Fields, state, and constructors | Done |
-| 3 | What a thing can do | Methods and behavior | Next |
-| 4 | Protecting what is inside a thing | Encapsulation and visibility | Not started |
-| 5 | Different things performing the same action | Polymorphism and interfaces | Not started |
+| 3 | What a thing can do | Methods and behavior | Done |
+| 4 | Protecting what is inside a thing | Encapsulation and visibility | Done |
+| 5 | Different things performing the same action | Polymorphism and interfaces | Next |
 | 6 | A child type receiving behavior from a parent | Inheritance and overriding | Not started |
 | 7 | Things working together instead of becoming each other | Composition and dependency injection | Not started |
 | 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Not started |
@@ -158,6 +158,158 @@ Milo is 2 years old and says meow!
 Luna is 5 years old and says meow!
 ```
 
+## Lesson 3: Methods and behavior
+
+Fields describe what an object knows. Methods describe what it can do.
+
+```text
+Cat
+├── state: name, age
+└── behavior: meow(), haveBirthday()
+```
+
+Methods can read an object's state and safely change it. Our new Java method
+increases the age of the particular cat that receives the call:
+
+```java
+public void haveBirthday() {
+    age = age + 1;
+    System.out.println(name + " is now " + age + " years old!");
+}
+```
+
+Calling it on Milo changes only Milo:
+
+```java
+milo.haveBirthday();
+```
+
+```text
+Before: Milo is 2, Luna is 5
+After:  Milo is 3, Luna is 5
+```
+
+The Go equivalent uses an explicit pointer receiver because the method changes
+the original value:
+
+```go
+func (c *Cat) HaveBirthday() {
+	c.age++
+	fmt.Printf("%s is now %d years old!\n", c.name, c.age)
+}
+```
+
+Java makes the current object available as `this`. Go writes the current value
+explicitly as the receiver `c`.
+
+## Lesson 4: Encapsulation and visibility
+
+Before encapsulation, outside code could put a cat into an invalid state:
+
+```java
+milo.age = -100;
+milo.name = "";
+```
+
+Encapsulation protects the state and exposes meaningful behavior instead:
+
+```java
+class Cat {
+    private String name;
+    private int age;
+
+    public Cat(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public void meow() {
+        System.out.println(
+            name + " is " + age + " years old and says meow!"
+        );
+    }
+
+    public void haveBirthday() {
+        age = age + 1;
+        System.out.println(name + " is now " + age + " years old!");
+    }
+}
+```
+
+The two visibility keywords used here mean:
+
+- `private`: only code inside `Cat` can directly access the member.
+- `public`: other code is allowed to use the constructor or method.
+
+The compiler proves that the protection is real. Trying to access the private
+field from `Main` produces:
+
+```text
+error: age has private access in Cat
+    milo.age = -100;
+        ^
+```
+
+After removing that invalid access, outside code can still ask the object to
+change itself through its public behavior:
+
+```java
+milo.haveBirthday();
+milo.meow();
+```
+
+This is the public surface of the object:
+
+```text
+Main
+  │
+  │ public methods
+  ▼
+┌──────────────────────────┐
+│ Cat                      │
+│                          │
+│ private name             │
+│ private age              │
+│                          │
+│ public haveBirthday()    │
+│ public meow()            │
+└──────────────────────────┘
+```
+
+Encapsulation does not mean automatically adding a getter and setter for every
+field. A public `setAge(-100)` would expose the same problem under a different
+name. Prefer meaningful operations such as `haveBirthday()` that keep the
+object valid.
+
+### Encapsulation in Go
+
+Go uses capitalization rather than `private` and `public` keywords:
+
+```go
+type Cat struct {
+	name string // unexported
+	age  int    // unexported
+}
+
+func NewCat(name string, age int) *Cat { // exported
+	return &Cat{name: name, age: age}
+}
+
+func (c *Cat) HaveBirthday() { // exported
+	c.age++
+}
+```
+
+There is an important difference:
+
+- Java `private` protects a member from every other class, even in the same
+  package.
+- Go lowercase names are hidden from other packages, but code in the same
+  package can still access them.
+
+For a stronger Go boundary, place `Cat` in its own package and let other
+packages use only `NewCat`, `Meow`, and `HaveBirthday`.
+
 ## Java and Go connection
 
 | Java | Go | Meaning |
@@ -168,6 +320,8 @@ Luna is 5 years old and says meow!
 | `Cat(...)` | `NewCat(...)` | Create initialized values |
 | `this.name` | `c.name` | Access this value's field |
 | `void meow()` | `func (c *Cat) Meow()` | Attach behavior to the data |
+| `private int age` | `age int` | Hide state from outside consumers |
+| `public void haveBirthday()` | `func (c *Cat) HaveBirthday()` | Expose safe behavior |
 | `new Cat(...)` | `NewCat(...)` | Create a new value |
 
 Java puts fields, constructors, and methods inside the class. Go declares the
@@ -223,7 +377,7 @@ go run main.go
 
 `go run` performs the build and run steps for you.
 
-## Lesson 2 completion check
+## Lessons 1–4 completion check
 
 Before moving on, we should be able to explain:
 
@@ -234,5 +388,12 @@ Before moving on, we should be able to explain:
 - `this` refers to the current Java object.
 - `String` is a class and `int` is a primitive type.
 - Java compilation and execution are separate steps.
+- Methods are behavior attached to an object.
+- A method call changes only the object that receives it.
+- `private` protects Java state from outside access.
+- `public` exposes behavior that other code may use.
+- Encapsulation is controlled access, not getters and setters everywhere.
+- Go visibility is package-based rather than class-based.
 
-Next: methods and behavior—how an object safely changes its own state.
+Next: polymorphism—different objects responding to the same action in their
+own way.
