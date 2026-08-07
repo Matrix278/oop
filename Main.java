@@ -33,7 +33,7 @@ interface Animal {
     void speak();
 }
 
-class Cat extends Pet implements Animal {
+class Cat extends Pet {
 
     private int age;
     private Toy toy;
@@ -44,6 +44,7 @@ class Cat extends Pet implements Animal {
         this.toy = toy;
     }
 
+    @Override
     public void speak() {
         System.out.println(getName() + " is " + age + " years old and says meow!");
     }
@@ -60,18 +61,19 @@ class Cat extends Pet implements Animal {
 
 }
 
-class Dog extends Pet implements Animal {
+class Dog extends Pet {
 
     public Dog(String name) {
         super(name);
     }
 
+    @Override
     public void speak() {
         System.out.println(getName() + " says woof!");
     }
 }
 
-class Pet {
+abstract class Pet implements Animal {
 
     private String name;
 
@@ -86,6 +88,8 @@ class Pet {
     public void sleep() {
         System.out.println(name + " is sleeping.");
     }
+
+    public abstract void speak();
 }
 
 class Toy {

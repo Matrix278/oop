@@ -29,8 +29,8 @@ For every lesson:
 | 5 | Different things performing the same action | Polymorphism and interfaces | Done |
 | 6 | A child type receiving behavior from a parent | Inheritance and overriding | Done |
 | 7 | Things working together instead of becoming each other | Composition and dependency injection | Done |
-| 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Next |
-| 9 | Put everything together | Small OOP application | Not started |
+| 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Done |
+| 9 | Put everything together | Small OOP application | Next |
 
 ## The four traditional OOP pillars
 
@@ -1042,12 +1042,272 @@ Understanding checks:
 
 Status: completed.
 
+## Lesson 8: Interfaces, abstract classes, and abstraction
+
+An interface and an abstract class both describe incomplete ideas, but they
+solve different problems.
+
+The `Animal` interface is a promise:
+
+```java
+interface Animal {
+    void speak();
+}
+```
+
+It says what an Animal must do, but it owns no ordinary per-object state and
+does not decide how the sound is produced.
+
+`Pet` is different. Every pet shares real state and working behavior:
+
+```text
+Pet
+├── name
+├── sleep()
+└── speak() -> unknown until we know the real kind of pet
+```
+
+A generic Pet is therefore only partially defined. Java represents that with
+an abstract class:
+
+```java
+abstract class Pet implements Animal {
+    private String name;
+
+    public Pet(String name) {
+        this.name = name;
+    }
+
+    protected String getName() {
+        return name;
+    }
+
+    public void sleep() {
+        System.out.println(name + " is sleeping.");
+    }
+
+    public abstract void speak();
+}
+```
+
+### Why make Pet abstract?
+
+Without `abstract`, Java would allow this:
+
+```java
+Pet mystery = new Pet("Mystery");
+```
+
+But the program cannot answer an important question:
+
+```text
+What sound does a generic Pet make?
+```
+
+Poor alternatives would be:
+
+- Invent a meaningless default sound.
+- Leave `speak()` empty.
+- Throw an exception only after the program is running.
+- Allow objects that are not complete enough to use correctly.
+
+`abstract` moves that problem to compile time:
+
+```text
+Pet is abstract; cannot be instantiated
+```
+
+It communicates:
+
+> Pet contains useful shared pieces, but only a concrete child such as Cat or
+> Dog is a complete object.
+
+An abstract class does not always need an abstract method. However, any class
+containing an abstract method must itself be declared abstract.
+
+### What does an abstract method do?
+
+This declaration has no method body:
+
+```java
+public abstract void speak();
+```
+
+It tells every concrete Pet child:
+
+> You must finish this missing behavior before Java will allow objects of your
+> class to be created.
+
+The children provide the missing part:
+
+```java
+class Cat extends Pet {
+    @Override
+    public void speak() {
+        System.out.println(getName() + " says meow!");
+    }
+}
+
+class Dog extends Pet {
+    @Override
+    public void speak() {
+        System.out.println(getName() + " says woof!");
+    }
+}
+```
+
+`@Override` asks the compiler to check that the method really matches a parent
+or interface declaration.
+
+### Why does an abstract class have a constructor?
+
+The abstract class cannot become a standalone final object, but its state still
+forms part of every real child object:
+
+```text
+new Cat("Milo", ...)
+        │
+        ▼
+Cat constructor
+        │ super("Milo")
+        ▼
+Pet constructor stores name in the Pet part
+        │
+        ▼
+Cat constructor finishes the Cat-specific part
+```
+
+So these statements are different:
+
+```java
+new Pet("Mystery"); // forbidden: tries to create an incomplete final object
+super(name);        // allowed: initializes the Pet part of a concrete child
+```
+
+### Interface versus abstract class
+
+| Interface | Abstract class |
+|---|---|
+| Describes a contract or capability | Describes a partially built parent |
+| Has no constructor | Can have constructors |
+| Has no ordinary per-object instance fields | Can own per-object state |
+| Can declare abstract/default behavior | Can mix abstract and working methods |
+| A class can implement many interfaces | A class can extend only one class |
+| Uses `implements` | Uses `extends` |
+
+Modern Java interfaces can also contain `default`, `static`, and private helper
+methods. They still do not replace an abstract class that must own ordinary
+per-object state and participate in a constructor chain.
+
+### Where is abstraction?
+
+Abstraction means exposing the useful control while hiding details the caller
+does not need:
+
+```java
+animal.speak();
+```
+
+The caller does not need to know:
+
+- Whether the object is Cat or Dog.
+- Where its name is stored.
+- How its output is constructed.
+- Which constructor chain initialized it.
+
+The simple `speak()` contract is the abstraction; the hidden implementation is
+the machinery behind it.
+
+### Go comparison
+
+Go has interfaces but no abstract classes:
+
+```go
+type Animal interface {
+	Speak()
+}
+```
+
+Go normally combines that contract with an ordinary reusable struct:
+
+```go
+type Pet struct {
+	name string
+}
+
+func (p Pet) Name() string {
+	return p.name
+}
+
+func (p Pet) Sleep() {
+	fmt.Printf("%s is sleeping.\n", p.name)
+}
+
+type Cat struct {
+	Pet
+	age int
+}
+
+func (c *Cat) Speak() {
+	fmt.Printf("%s says meow!\n", c.Name())
+}
+```
+
+The Go interface forces `Speak()` at compile time. Embedding `Pet` reuses state
+and behavior. Unlike Java, Go does not require every `Animal` to embed `Pet`;
+those are separate design choices composed together.
+
+### When should an abstract class be used?
+
+It can fit when:
+
+- The child types have a real is-a relationship with the parent.
+- Closely related children share state or working behavior.
+- A standalone parent object would be incomplete or invalid.
+- Some behavior must be supplied by every concrete child.
+
+Prefer an interface or composition when:
+
+- Types only share a capability, not a common identity and state.
+- A class needs several independent capabilities.
+- The relationship is has-a rather than is-a.
+- Reusing behavior would create an artificial inheritance tree.
+
+### Tiny challenge 8A: Protect an incomplete parent
+
+1. Change `Pet` to `abstract class Pet implements Animal`.
+2. Add `public abstract void speak();` to `Pet`.
+3. Remove the repeated `implements Animal` from `Cat` and `Dog`.
+4. Add `@Override` above both concrete `speak()` implementations.
+5. Temporarily try `new Pet("Mystery")`.
+6. Compile and observe the protection error.
+7. Remove the invalid line and verify the normal program again.
+
+Expected compiler error:
+
+```text
+Pet is abstract; cannot be instantiated
+```
+
+Understanding checks:
+
+> Why is a generic Pet incomplete while Cat and Dog are complete?
+
+> Why is `super(name)` legal even though `new Pet(name)` is not?
+
+> What does the interface provide that the abstract class does not, and vice
+> versa?
+
+Status: completed.
+
 ## Important lines and the ideas they demonstrate
 
 | Important Java line | OOP idea | Plain meaning |
 |---|---|---|
-| `class Cat extends Pet` | Inheritance | Cat is a specialized Pet |
-| `class Cat implements Animal` | Interface contract | Cat promises to provide `speak()` |
+| `abstract class Pet implements Animal` | Abstract parent and interface contract | Pet shares implementation but remains incomplete |
+| `class Cat extends Pet` | Inheritance | Cat completes and specializes Pet |
+| `public abstract void speak()` | Required child behavior | Every concrete Pet must provide a sound |
+| `@Override` | Compiler-checked replacement | The child completes or replaces inherited behavior |
 | `private int age` | Encapsulation | Outside code cannot directly change the field |
 | `public Cat(...)` | Constructor | Prepare a new Cat's starting state |
 | `super(name)` | Parent construction | Initialize the inherited Pet part |
@@ -1073,6 +1333,8 @@ Status: completed.
 | `private int age` | `age int` | Hide state from outside consumers |
 | `public void haveBirthday()` | `func (c *Cat) HaveBirthday()` | Expose safe behavior |
 | `implements Animal` | implicit interface satisfaction | Promise shared behavior |
+| `abstract class Pet` | interface plus embedded/concrete `Pet` | Model an incomplete shared parent without a direct Go equivalent |
+| `abstract void speak()` | `Animal` requires `Speak()` | Force concrete behavior at compile time |
 | `extends Pet` | embed `Pet` | Reuse state and behavior, with different semantics |
 | `super(name)` | `Pet: NewPet(name)` | Initialize the reused parent/component state |
 | `private Toy toy` | `toy *Toy` | Compose an object from another object |
@@ -1134,7 +1396,7 @@ go run main.go
 
 `go run` performs the build and run steps for you.
 
-## Lessons 1–7 completion check
+## Lessons 1–8 completion check
 
 Before moving on, we should be able to explain:
 
@@ -1165,6 +1427,13 @@ Before moving on, we should be able to explain:
 - Delegation asks the responsible collaborator to perform its part of the work.
 - Dependency injection is useful when it creates a meaningful choice, not as a
   ritual applied to every value.
+- An interface defines a contract without owning ordinary per-object state.
+- An abstract class can combine shared state, constructors, working methods,
+  and unfinished methods.
+- Abstract classes cannot be instantiated, but their constructors initialize
+  the parent part of concrete child objects.
+- Abstract methods force concrete children to provide missing behavior.
+- Go combines interfaces with composition and embedding instead of abstract
+  classes.
 
-Next: interfaces and abstract classes—shared rules versus shared
-implementation.
+Next: a small OOP application that combines the complete learning path.
