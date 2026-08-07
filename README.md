@@ -67,6 +67,27 @@ Cat class
 └── Luna object
 ```
 
+### Tiny challenge 1: Create the first object
+
+Build a `Cat` class that:
+
+1. Stores a cat's name.
+2. Receives the name through its constructor.
+3. Has a `meow()` method.
+4. Creates an actual cat named Milo in `main()`.
+
+Expected output:
+
+```text
+Milo says meow!
+```
+
+Understanding check:
+
+> Which part is the plan, and which value is the actual object?
+
+Status: completed.
+
 ## Lesson 2: Fields, state, and constructors
 
 Think of every object as carrying its own backpack of information:
@@ -173,6 +194,28 @@ Milo is 2 years old and says meow!
 Luna is 5 years old and says meow!
 ```
 
+### Tiny challenge 2: Give every object its own state
+
+Extend `Cat` so that:
+
+1. It stores both `name` and `age`.
+2. Its constructor receives and saves both values.
+3. `main()` creates Milo, age 2, and Luna, age 5.
+4. `meow()` prints the state belonging to the receiving object.
+
+Expected output:
+
+```text
+Milo is 2 years old and says meow!
+Luna is 5 years old and says meow!
+```
+
+Understanding check:
+
+> Why does changing Milo's state not change Luna's state?
+
+Status: completed.
+
 ## Lesson 3: Methods and behavior
 
 Fields describe what an object knows. Methods describe what it can do.
@@ -216,6 +259,29 @@ func (c *Cat) HaveBirthday() {
 
 Java makes the current object available as `this`. Go writes the current value
 explicitly as the receiver `c`.
+
+### Tiny challenge 3: Let an object change itself
+
+Add `haveBirthday()` so that:
+
+1. It increases only the receiving cat's age by one.
+2. It prints the cat's name and new age.
+3. It is called for Milo but not Luna.
+4. Calling `meow()` afterward proves that the new state was saved.
+
+Expected output:
+
+```text
+Milo is now 3 years old!
+Milo is 3 years old and says meow!
+Luna is 5 years old and says meow!
+```
+
+Understanding check:
+
+> Why does `milo.haveBirthday()` change Milo but not Luna?
+
+Status: completed.
 
 ## Lesson 4: Encapsulation and visibility
 
@@ -325,6 +391,28 @@ There is an important difference:
 For a stronger Go boundary, place `Cat` in its own package and let other
 packages use only `NewCat`, `Meow`, and `HaveBirthday`.
 
+### Tiny challenge 4: Let the compiler protect the object
+
+1. Change `name` and `age` to `private`.
+2. Make the constructor and behavior methods `public`.
+3. Temporarily try `milo.age = -100` inside `main()`.
+4. Compile and read the protection error.
+5. Remove the invalid line and run the program normally.
+
+Expected compiler error:
+
+```text
+error: age has private access in Cat
+    milo.age = -100;
+        ^
+```
+
+Understanding check:
+
+> Why is `milo.haveBirthday()` allowed while `milo.age = -100` is rejected?
+
+Status: completed.
+
 ## Lesson 5: Polymorphism and interfaces
 
 Polymorphism means that different objects can receive the same request and
@@ -427,6 +515,28 @@ The important language difference is:
 An interface is also our first example of abstraction. The caller knows the
 simple action `speak()` but does not need to know how each animal produces its
 sound.
+
+### Tiny challenge 5: One request, different behavior
+
+1. Create an `Animal` interface containing `speak()`.
+2. Make `Cat` implement it and meow through `speak()`.
+3. Create a `Dog` that implements it and woofs through `speak()`.
+4. Add `makeItSpeak(Animal animal)`.
+5. Pass both Milo and Rex to that same method.
+
+Expected focused output:
+
+```text
+Milo is 2 years old and says meow!
+Rex says woof!
+```
+
+Understanding check:
+
+> How can `makeItSpeak` call the correct method without checking whether the
+> object is a Cat or Dog?
+
+Status: completed.
 
 ## Lesson 6: Inheritance, shared state, and `super`
 
@@ -672,6 +782,52 @@ Go composition:    Cat contains a Pet
 Go has no constructor chain. `NewCat` explicitly creates the embedded `Pet`
 with `NewPet(name)`. Go usually combines composition with interfaces instead of
 building deep inheritance trees.
+
+### Tiny challenge 6A: Inherit behavior
+
+1. Create a `Pet` parent class with a public `sleep()` method.
+2. Make both `Cat` and `Dog` extend `Pet`.
+3. Keep both classes implementing `Animal`.
+4. Call `milo.sleep()` and `rex.sleep()` without copying `sleep()` into either
+   child class.
+
+First expected output:
+
+```text
+The pet is sleeping.
+The pet is sleeping.
+```
+
+Understanding check:
+
+> Where does Java find `sleep()` when the method is absent from Cat and Dog?
+
+Status: completed.
+
+### Tiny challenge 6B: Share state through the parent
+
+1. Move the duplicated `name` field from `Cat` and `Dog` into `Pet`.
+2. Keep the parent field private.
+3. Give `Pet` a constructor and protected `getName()` behavior.
+4. Call `super(name)` from both child constructors.
+5. Keep `age` inside `Cat` because it is not shared by every pet.
+6. Make inherited `sleep()` print the stored name.
+
+Final expected sleeping output:
+
+```text
+Milo is sleeping.
+Rex is sleeping.
+```
+
+Understanding checks:
+
+> Why does `name` belong in Pet while `age` remains in Cat?
+
+> Does `super(name)` create a second Pet object, or initialize part of the same
+> Cat/Dog object?
+
+Status: completed.
 
 ## Java and Go connection
 
