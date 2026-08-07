@@ -30,7 +30,7 @@ For every lesson:
 | 6 | A child type receiving behavior from a parent | Inheritance and overriding | Done |
 | 7 | Things working together instead of becoming each other | Composition and dependency injection | Done |
 | 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Done |
-| 9 | Put everything together | Small OOP application | Next |
+| 9 | Put everything together | Small OOP application | Done |
 
 ## The four traditional OOP pillars
 
@@ -38,10 +38,10 @@ These are often called pillars or principles, not “types of OOP”:
 
 | Pillar | Child-friendly meaning | Where we learn it |
 |---|---|---|
-| Encapsulation | Protect the inside of an object | Lesson 4 |
-| Abstraction | Show a simple control and hide the machinery | Lessons 5 and 8 |
-| Inheritance | A child class receives things from a parent class | Lesson 6 |
-| Polymorphism | The same request produces different behavior | Lesson 5 |
+| Encapsulation | Protect the inside of an object | Lessons 4 and 9 |
+| Abstraction | Show a simple control and hide the machinery | Lessons 5, 8, and 9 |
+| Inheritance | A child class receives things from a parent class | Lessons 6 and 9 |
+| Polymorphism | The same request produces different behavior | Lessons 5 and 9 |
 
 Composition is not one of the traditional four pillars, but it is one of the
 most important ways to design software. Go strongly favors it, so Lesson 7
@@ -1300,6 +1300,265 @@ Understanding checks:
 
 Status: completed.
 
+## Lesson 9: Final application—Pet Daycare
+
+The final application does not introduce another OOP mechanism. It combines the
+ideas from the earlier lessons and gives each object one clear responsibility.
+
+`Main` creates and connects the objects:
+
+```java
+Toy ball = new Toy("a ball");
+Toy mouse = new Toy("a toy mouse");
+
+Cat milo = new Cat("Milo", 2, ball);
+Cat luna = new Cat("Luna", 5, mouse);
+Dog rex = new Dog("Rex");
+
+Pet[] pets = {milo, luna, rex};
+
+PetDaycare daycare = new PetDaycare(pets);
+daycare.startDay();
+
+milo.play();
+luna.play();
+```
+
+This role for `Main` is sometimes called the composition root: it is the place
+where the application creates objects and connects their dependencies.
+
+`PetDaycare` owns the daily routine:
+
+```java
+class PetDaycare {
+    private Pet[] pets;
+
+    public PetDaycare(Pet[] pets) {
+        this.pets = pets;
+    }
+
+    public void startDay() {
+        for (Pet pet : pets) {
+            pet.speak();
+            pet.sleep();
+        }
+    }
+}
+```
+
+The responsibilities are now separated:
+
+```text
+Main
+└── Creates and connects the application objects
+
+PetDaycare
+└── Knows the steps in a daycare day
+
+Pet
+├── Owns the shared name
+└── Provides shared sleeping behavior
+
+Cat and Dog
+└── Provide type-specific speaking behavior
+
+Toy
+└── Owns toy-related behavior
+```
+
+### A group containing different concrete objects
+
+This array uses the common abstract parent type:
+
+```java
+Pet[] pets = {milo, luna, rex};
+```
+
+The references have type `Pet`, but the real objects keep their concrete types:
+
+```text
+Pet[]
+├── Pet reference -> Cat object: Milo
+├── Pet reference -> Cat object: Luna
+└── Pet reference -> Dog object: Rex
+```
+
+Inside the loop:
+
+```java
+for (Pet pet : pets) {
+    pet.speak();
+    pet.sleep();
+}
+```
+
+The reference type controls which methods are available. The runtime object
+controls which overridden implementation runs:
+
+```text
+pet.speak()
+├── real object is Cat -> Cat.speak()
+└── real object is Dog -> Dog.speak()
+```
+
+`pet.play()` is unavailable because `play()` is not part of the shared `Pet`
+contract. `milo.play()` remains valid because `milo` has the more specific
+compile-time type `Cat`.
+
+### All four OOP pillars in the final application
+
+| Pillar | Where it appears | What it achieves |
+|---|---|---|
+| Encapsulation | `private` fields in `Pet`, `Cat`, `Toy`, and `PetDaycare` | Objects control direct access to their state |
+| Abstraction | `Animal`, abstract `Pet`, and `daycare.startDay()` | Callers use simple operations without knowing internal steps |
+| Inheritance | `Cat extends Pet` and `Dog extends Pet` | Related child types reuse shared pet state and behavior |
+| Polymorphism | `Pet[]` and `pet.speak()` in the loop | One operation dispatches to Cat or Dog behavior |
+
+#### Encapsulation
+
+```java
+private Pet[] pets;
+private String name;
+private int age;
+private Toy toy;
+```
+
+Each object protects the state it owns. Other code uses meaningful behavior
+such as `startDay()`, `speak()`, `sleep()`, and `play()`.
+
+#### Abstraction
+
+```java
+daycare.startDay();
+```
+
+`Main` does not need to know that starting a day means looping over pets and
+calling two methods. `startDay()` exposes the useful idea and hides those
+details.
+
+The `Animal` interface similarly exposes `speak()` without exposing how each
+animal produces its sound.
+
+#### Inheritance
+
+```java
+class Cat extends Pet
+class Dog extends Pet
+```
+
+Cat and Dog are kinds of Pet. They reuse the inherited name and `sleep()`
+behavior while completing their own `speak()` behavior.
+
+#### Polymorphism
+
+```java
+for (Pet pet : pets) {
+    pet.speak();
+}
+```
+
+The same source line produces a meow for Cat objects and a woof for Dog
+objects. No `if` statement needs to inspect the concrete class.
+
+### Supporting techniques: composition and dependency injection
+
+Composition and dependency injection are not members of the traditional four
+pillars, but they connect the application:
+
+```java
+private Pet[] pets;                 // Daycare has Pets: composition
+public PetDaycare(Pet[] pets)       // Daycare declares a dependency
+this.pets = pets;                   // Store the injected dependency
+new PetDaycare(pets);               // Main performs the injection
+```
+
+This keeps construction decisions in `Main` and daycare behavior in
+`PetDaycare`.
+
+### Go version of the daycare boundary
+
+Go can describe the behavior needed by the daycare with an interface:
+
+```go
+type DaycarePet interface {
+	Speak()
+	Sleep()
+}
+
+type PetDaycare struct {
+	pets []DaycarePet
+}
+
+func NewPetDaycare(pets []DaycarePet) *PetDaycare {
+	return &PetDaycare{pets: pets}
+}
+
+func (d *PetDaycare) StartDay() {
+	for _, pet := range d.pets {
+		pet.Speak()
+		pet.Sleep()
+	}
+}
+```
+
+Concrete Cat and Dog values satisfy `DaycarePet` implicitly when they provide
+both methods. Their embedded `Pet` supplies `Sleep()`, while each concrete type
+supplies `Speak()`:
+
+```go
+pets := []DaycarePet{milo, luna, rex}
+daycare := NewPetDaycare(pets)
+daycare.StartDay()
+```
+
+Java uses an abstract parent array here; Go uses an interface slice. Both let
+the daycare operate on different concrete types through one shared view.
+
+### Tiny challenge 9A: Treat different pets uniformly
+
+1. Put Milo, Luna, and Rex into `Pet[] pets`.
+2. Use a for-each loop with a `Pet` loop variable.
+3. Call `speak()` and `sleep()` through that shared variable.
+4. Remove the duplicated individual calls.
+5. Keep Cat-specific `play()` calls on the Cat variables.
+
+Expected output:
+
+```text
+Milo is 2 years old and says meow!
+Milo is sleeping.
+Luna is 5 years old and says meow!
+Luna is sleeping.
+Rex says woof!
+Rex is sleeping.
+Milo plays with a ball!
+Luna plays with a toy mouse!
+```
+
+Understanding check:
+
+> Why can a `Pet` variable call the correct Cat/Dog `speak()` implementation
+> but not the Cat-only `play()` method?
+
+Status: completed.
+
+### Tiny challenge 9B: Move the routine into PetDaycare
+
+1. Create `PetDaycare` with a private `Pet[] pets` field.
+2. Inject the array through its constructor.
+3. Move the loop from `Main` into `startDay()`.
+4. Replace the loop in `Main` with `daycare.startDay()`.
+5. Verify that the output remains exactly unchanged.
+
+Understanding checks:
+
+> Which responsibility moved from Main to PetDaycare?
+
+> Where do composition, dependency injection, abstraction, and polymorphism
+> appear in the new class?
+
+Status: completed.
+
 ## Important lines and the ideas they demonstrate
 
 | Important Java line | OOP idea | Plain meaning |
@@ -1313,12 +1572,17 @@ Status: completed.
 | `super(name)` | Parent construction | Initialize the inherited Pet part |
 | `this.age = age` | Object state | Save a parameter in this Cat |
 | `public void speak()` | Behavior and polymorphism | This type supplies its own response to `speak()` |
-| `makeItSpeak(Animal animal)` | Polymorphic use | Work with any object satisfying `Animal` |
+| `Pet[] pets = {milo, luna, rex}` | Polymorphic collection | Store different concrete children through one parent type |
+| `for (Pet pet : pets)` | Uniform processing | Run one routine for every concrete Pet kind |
+| `pet.speak()` | Runtime polymorphism | Dispatch to Cat or Dog implementation |
 | `private Toy toy` | Composition | Cat has a Toy |
 | `Cat(..., Toy toy)` | Declared dependency | Cat states that it needs a Toy |
 | `this.toy = toy` | Constructor injection | Store the dependency supplied from outside |
 | `new Cat("Milo", 2, ball)` | Injection at creation | Main chooses and gives Milo his Toy |
 | `toy.useBy(getName())` | Delegation | Cat asks Toy to perform toy-related work |
+| `private Pet[] pets` | Composition and encapsulation | PetDaycare owns a protected group of Pets |
+| `PetDaycare(Pet[] pets)` | Constructor injection | Daycare receives its required Pets |
+| `daycare.startDay()` | Abstraction | Start the routine without exposing its loop and steps |
 
 ## Java and Go connection
 
@@ -1340,6 +1604,9 @@ Status: completed.
 | `private Toy toy` | `toy *Toy` | Compose an object from another object |
 | `Cat(..., Toy toy)` | `NewCat(..., toy *Toy)` | Declare an injected dependency |
 | `toy.useBy(...)` | `c.toy.UseBy(...)` | Delegate work to the collaborator |
+| `Pet[]` | `[]DaycarePet` | Hold different concrete values through one shared type |
+| `for (Pet pet : pets)` | `for _, pet := range pets` | Process every value uniformly |
+| `new PetDaycare(pets)` | `NewPetDaycare(pets)` | Inject the application group |
 | `new Cat(...)` | `NewCat(...)` | Create a new value |
 
 Java puts fields, constructors, and methods inside the class. Go declares the
@@ -1373,8 +1640,8 @@ javac Main.java
 ```
 
 This produces `Main.class`, `Animal.class`, `Pet.class`, `Cat.class`,
-`Dog.class`, and `Toy.class`. These are generated bytecode files, not source
-code, so do not edit or commit them.
+`Dog.class`, `Toy.class`, and `PetDaycare.class`. These are generated bytecode
+files, not source code, so do not edit or commit them.
 
 Run the compiled `Main` class:
 
@@ -1396,7 +1663,7 @@ go run main.go
 
 `go run` performs the build and run steps for you.
 
-## Lessons 1–8 completion check
+## Complete learning-path check
 
 Before moving on, we should be able to explain:
 
@@ -1435,5 +1702,14 @@ Before moving on, we should be able to explain:
 - Abstract methods force concrete children to provide missing behavior.
 - Go combines interfaces with composition and embedding instead of abstract
   classes.
+- A parent-typed array can hold multiple concrete child types.
+- The reference type controls visible operations; the runtime object controls
+  overridden behavior.
+- A coordinating class such as `PetDaycare` can hide a workflow behind one
+  meaningful method.
+- The final application contains encapsulation, abstraction, inheritance, and
+  polymorphism working together.
 
-Next: a small OOP application that combines the complete learning path.
+The core learning path is complete. Future extensions can add validation,
+multiple toy implementations, tests, packages, collections, or persistence
+without changing these foundational ideas.

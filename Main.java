@@ -1,10 +1,6 @@
 
 public class Main {
 
-    static void makeItSpeak(Animal animal) {
-        animal.speak();
-    }
-
     public static void main(String[] args) {
         Toy ball = new Toy("a ball");
         Toy mouse = new Toy("a toy mouse");
@@ -13,15 +9,10 @@ public class Main {
         Cat luna = new Cat("Luna", 5, mouse);
         Dog rex = new Dog("Rex");
 
-        milo.haveBirthday();
-        milo.speak();
-        luna.speak();
+        Pet[] pets = {milo, luna, rex};
 
-        makeItSpeak(milo);
-        makeItSpeak(rex);
-
-        milo.sleep();
-        rex.sleep();
+        PetDaycare daycare = new PetDaycare(pets);
+        daycare.startDay();
 
         milo.play();
         luna.play();
@@ -102,5 +93,21 @@ class Toy {
 
     public void useBy(String petName) {
         System.out.println(petName + " plays with " + name + "!");
+    }
+}
+
+class PetDaycare {
+
+    private Pet[] pets;
+
+    public PetDaycare(Pet[] pets) {
+        this.pets = pets;
+    }
+
+    public void startDay() {
+        for (Pet pet : pets) {
+            pet.speak();
+            pet.sleep();
+        }
     }
 }
