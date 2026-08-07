@@ -6,8 +6,11 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        Cat milo = new Cat("Milo", 2);
-        Cat luna = new Cat("Luna", 5);
+        Toy ball = new Toy("a ball");
+        Toy mouse = new Toy("a toy mouse");
+
+        Cat milo = new Cat("Milo", 2, ball);
+        Cat luna = new Cat("Luna", 5, mouse);
         Dog rex = new Dog("Rex");
 
         milo.haveBirthday();
@@ -19,6 +22,9 @@ public class Main {
 
         milo.sleep();
         rex.sleep();
+
+        milo.play();
+        luna.play();
     }
 }
 
@@ -30,10 +36,12 @@ interface Animal {
 class Cat extends Pet implements Animal {
 
     private int age;
+    private Toy toy;
 
-    public Cat(String name, int age) {
+    public Cat(String name, int age, Toy toy) {
         super(name);
         this.age = age;
+        this.toy = toy;
     }
 
     public void speak() {
@@ -44,6 +52,10 @@ class Cat extends Pet implements Animal {
         age = age + 1;
 
         System.out.println(getName() + " is now " + age + " years old!");
+    }
+
+    public void play() {
+        toy.useBy(getName());
     }
 
 }
@@ -73,5 +85,18 @@ class Pet {
 
     public void sleep() {
         System.out.println(name + " is sleeping.");
+    }
+}
+
+class Toy {
+
+    private String name;
+
+    public Toy(String name) {
+        this.name = name;
+    }
+
+    public void useBy(String petName) {
+        System.out.println(petName + " plays with " + name + "!");
     }
 }

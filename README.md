@@ -28,8 +28,8 @@ For every lesson:
 | 4 | Protecting what is inside a thing | Encapsulation and visibility | Done |
 | 5 | Different things performing the same action | Polymorphism and interfaces | Done |
 | 6 | A child type receiving behavior from a parent | Inheritance and overriding | Done |
-| 7 | Things working together instead of becoming each other | Composition and dependency injection | Next |
-| 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Not started |
+| 7 | Things working together instead of becoming each other | Composition and dependency injection | Done |
+| 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Next |
 | 9 | Put everything together | Small OOP application | Not started |
 
 ## The four traditional OOP pillars
@@ -829,6 +829,237 @@ Understanding checks:
 
 Status: completed.
 
+## Lesson 7: Composition and dependency injection
+
+Inheritance models an **is-a** relationship. Composition models a **has-a**
+relationship:
+
+```text
+Cat is a Pet    -> inheritance
+Cat has a Toy   -> composition
+```
+
+A cat is not a kind of toy, so `Cat extends Toy` would describe the wrong
+relationship. Instead, the cat stores another object in a field:
+
+```java
+class Cat extends Pet implements Animal {
+    private int age;
+    private Toy toy;
+}
+```
+
+The objects now form a small team:
+
+```text
+milo -> Cat object
+        ├── inherited Pet state
+        ├── age: 2
+        └── toy -> Toy object: "a ball"
+```
+
+### What is a dependency?
+
+A dependency is something an object needs to do part of its work. `Cat` needs
+a `Toy` to perform `play()`, so `Toy` is a dependency of `Cat`.
+
+The cat could create the dependency internally:
+
+```java
+public Cat(String name, int age) {
+    super(name);
+    this.age = age;
+    this.toy = new Toy("a ball");
+}
+```
+
+That works, but it forces every cat to choose and construct its own ball. The
+choice is hidden inside `Cat` and cannot be changed by the code creating it.
+
+### What is dependency injection?
+
+Dependency injection means creating a dependency outside an object and giving
+it to that object:
+
+```java
+public Cat(String name, int age, Toy toy) {
+    super(name);
+    this.age = age;
+    this.toy = toy;
+}
+```
+
+The creation code chooses the dependencies:
+
+```java
+Toy ball = new Toy("a ball");
+Toy mouse = new Toy("a toy mouse");
+
+Cat milo = new Cat("Milo", 2, ball);
+Cat luna = new Cat("Luna", 5, mouse);
+```
+
+The full flow is:
+
+```text
+Main creates Toy
+      │
+      ▼
+Main passes Toy to Cat constructor
+      │
+      ▼
+Cat stores Toy in a private field
+      │
+      ▼
+Cat.play() delegates to Toy.useBy()
+```
+
+No framework, annotation, or container is required. Constructor injection is
+ordinary object creation with a dependency passed as an argument.
+
+### Delegation and collaboration
+
+`Toy` owns toy-related behavior:
+
+```java
+class Toy {
+    private String name;
+
+    public Toy(String name) {
+        this.name = name;
+    }
+
+    public void useBy(String petName) {
+        System.out.println(petName + " plays with " + name + "!");
+    }
+}
+```
+
+`Cat` delegates instead of doing the toy's work itself:
+
+```java
+public void play() {
+    toy.useBy(getName());
+}
+```
+
+Delegation means:
+
+> Ask the object responsible for the work to perform it.
+
+### Composition and injection in Go
+
+The same design is common Go:
+
+```go
+type Toy struct {
+	name string
+}
+
+func NewToy(name string) *Toy {
+	return &Toy{name: name}
+}
+
+func (t *Toy) UseBy(petName string) {
+	fmt.Printf("%s plays with %s!\n", petName, t.name)
+}
+
+type Cat struct {
+	Pet
+	age int
+	toy *Toy
+}
+
+func NewCat(name string, age int, toy *Toy) *Cat {
+	return &Cat{
+		Pet: NewPet(name),
+		age: age,
+		toy: toy,
+	}
+}
+
+func (c *Cat) Play() {
+	c.toy.UseBy(c.Name())
+}
+```
+
+Java and Go both use a field for composition and a constructor/factory
+parameter for injection. Go simply expresses construction with an ordinary
+`NewCat` function instead of a language-level constructor.
+
+### Is dependency injection always good?
+
+Dependency injection is a tool, not a rule that every object must use.
+
+It helps when:
+
+- Different objects need different implementations or configurations.
+- A dependency is expensive or should be shared.
+- Tests need a small fake dependency instead of a real external service.
+- Construction decisions should stay outside the business object.
+
+It can be unnecessary when:
+
+- The value is a tiny internal implementation detail that will never vary.
+- Injecting it makes the constructor harder to understand without providing a
+  useful choice.
+- Many layers merely pass the same dependency around without using it.
+
+The goal is not “inject everything.” The goal is to make important
+collaborators explicit while keeping simple internal details simple.
+
+Dependency injection is also different from dependency inversion:
+
+- Dependency injection is the technique of giving an object its dependencies.
+- Dependency inversion is a broader design principle about depending on stable
+  abstractions rather than unstable details.
+- A dependency-injection framework is optional automation, not DI itself.
+
+### Tiny challenge 7A: Give each cat a toy
+
+1. Create `Toy` with a private name, constructor, and `useBy()` behavior.
+2. Add a private `Toy toy` field to `Cat`.
+3. Receive and store the toy through the `Cat` constructor.
+4. Create a ball and toy mouse in `Main`.
+5. Inject the ball into Milo and the mouse into Luna.
+6. Add `play()` and delegate to `toy.useBy(getName())`.
+7. Do not call `new Toy(...)` inside `Cat`.
+
+Expected additional output:
+
+```text
+Milo plays with a ball!
+Luna plays with a toy mouse!
+```
+
+Understanding checks:
+
+> Which line demonstrates composition?
+
+> Which line performs dependency injection?
+
+> Why can Milo and Luna use different toys without changing the Cat class?
+
+Status: completed.
+
+## Important lines and the ideas they demonstrate
+
+| Important Java line | OOP idea | Plain meaning |
+|---|---|---|
+| `class Cat extends Pet` | Inheritance | Cat is a specialized Pet |
+| `class Cat implements Animal` | Interface contract | Cat promises to provide `speak()` |
+| `private int age` | Encapsulation | Outside code cannot directly change the field |
+| `public Cat(...)` | Constructor | Prepare a new Cat's starting state |
+| `super(name)` | Parent construction | Initialize the inherited Pet part |
+| `this.age = age` | Object state | Save a parameter in this Cat |
+| `public void speak()` | Behavior and polymorphism | This type supplies its own response to `speak()` |
+| `makeItSpeak(Animal animal)` | Polymorphic use | Work with any object satisfying `Animal` |
+| `private Toy toy` | Composition | Cat has a Toy |
+| `Cat(..., Toy toy)` | Declared dependency | Cat states that it needs a Toy |
+| `this.toy = toy` | Constructor injection | Store the dependency supplied from outside |
+| `new Cat("Milo", 2, ball)` | Injection at creation | Main chooses and gives Milo his Toy |
+| `toy.useBy(getName())` | Delegation | Cat asks Toy to perform toy-related work |
+
 ## Java and Go connection
 
 | Java | Go | Meaning |
@@ -844,6 +1075,9 @@ Status: completed.
 | `implements Animal` | implicit interface satisfaction | Promise shared behavior |
 | `extends Pet` | embed `Pet` | Reuse state and behavior, with different semantics |
 | `super(name)` | `Pet: NewPet(name)` | Initialize the reused parent/component state |
+| `private Toy toy` | `toy *Toy` | Compose an object from another object |
+| `Cat(..., Toy toy)` | `NewCat(..., toy *Toy)` | Declare an injected dependency |
+| `toy.useBy(...)` | `c.toy.UseBy(...)` | Delegate work to the collaborator |
 | `new Cat(...)` | `NewCat(...)` | Create a new value |
 
 Java puts fields, constructors, and methods inside the class. Go declares the
@@ -876,9 +1110,9 @@ Compile the Java source:
 javac Main.java
 ```
 
-This produces `Main.class`, `Animal.class`, `Pet.class`, `Cat.class`, and
-`Dog.class`. These are generated bytecode files, not source code, so do not edit
-or commit them.
+This produces `Main.class`, `Animal.class`, `Pet.class`, `Cat.class`,
+`Dog.class`, and `Toy.class`. These are generated bytecode files, not source
+code, so do not edit or commit them.
 
 Run the compiled `Main` class:
 
@@ -900,7 +1134,7 @@ go run main.go
 
 `go run` performs the build and run steps for you.
 
-## Lessons 1–6 completion check
+## Lessons 1–7 completion check
 
 Before moving on, we should be able to explain:
 
@@ -925,6 +1159,12 @@ Before moving on, we should be able to explain:
 - `super(...)` selects and calls a matching direct-parent constructor.
 - Parent construction happens before child-specific initialization.
 - Java uses inheritance; Go normally uses composition and embedding.
+- Composition models a has-a relationship between collaborating objects.
+- A dependency is something an object needs to do its work.
+- Constructor injection supplies that dependency from outside the object.
+- Delegation asks the responsible collaborator to perform its part of the work.
+- Dependency injection is useful when it creates a meaningful choice, not as a
+  ritual applied to every value.
 
-Next: composition and dependency injection—objects working together without
-becoming parent and child types.
+Next: interfaces and abstract classes—shared rules versus shared
+implementation.
