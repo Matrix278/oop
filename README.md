@@ -26,11 +26,26 @@ For every lesson:
 | 2 | What a thing remembers | Fields, state, and constructors | Done |
 | 3 | What a thing can do | Methods and behavior | Done |
 | 4 | Protecting what is inside a thing | Encapsulation and visibility | Done |
-| 5 | Different things performing the same action | Polymorphism and interfaces | Next |
-| 6 | A child type receiving behavior from a parent | Inheritance and overriding | Not started |
-| 7 | Things working together instead of becoming each other | Composition and dependency injection | Not started |
+| 5 | Different things performing the same action | Polymorphism and interfaces | Done |
+| 6 | A child type receiving behavior from a parent | Inheritance and overriding | Done |
+| 7 | Things working together instead of becoming each other | Composition and dependency injection | Next |
 | 8 | Shared rules versus shared implementation | Interfaces and abstract classes | Not started |
 | 9 | Put everything together | Small OOP application | Not started |
+
+## The four traditional OOP pillars
+
+These are often called pillars or principles, not “types of OOP”:
+
+| Pillar | Child-friendly meaning | Where we learn it |
+|---|---|---|
+| Encapsulation | Protect the inside of an object | Lesson 4 |
+| Abstraction | Show a simple control and hide the machinery | Lessons 5 and 8 |
+| Inheritance | A child class receives things from a parent class | Lesson 6 |
+| Polymorphism | The same request produces different behavior | Lesson 5 |
+
+Composition is not one of the traditional four pillars, but it is one of the
+most important ways to design software. Go strongly favors it, so Lesson 7
+compares it directly with inheritance.
 
 ## Lesson 1: Classes and objects
 
@@ -310,6 +325,354 @@ There is an important difference:
 For a stronger Go boundary, place `Cat` in its own package and let other
 packages use only `NewCat`, `Meow`, and `HaveBirthday`.
 
+## Lesson 5: Polymorphism and interfaces
+
+Polymorphism means that different objects can receive the same request and
+respond in their own way:
+
+```text
+speak()
+├── Cat object -> meow
+└── Dog object -> woof
+```
+
+An interface describes a promise without choosing the implementation:
+
+```java
+interface Animal {
+    void speak();
+}
+```
+
+Interface methods are public contracts. A class implementing `speak()` must
+therefore make its implementation `public` too.
+
+`Cat` and `Dog` explicitly promise to provide that behavior:
+
+```java
+class Cat implements Animal {
+    public void speak() {
+        System.out.println("Meow!");
+    }
+}
+
+class Dog implements Animal {
+    public void speak() {
+        System.out.println("Woof!");
+    }
+}
+```
+
+One method can now work with any implementation of `Animal`:
+
+```java
+static void makeItSpeak(Animal animal) {
+    animal.speak();
+}
+```
+
+The parameter type is only `Animal`, but the real object decides which method
+runs:
+
+```java
+makeItSpeak(milo); // real object is Cat -> Cat.speak()
+makeItSpeak(rex);  // real object is Dog -> Dog.speak()
+```
+
+This runtime selection is called dynamic dispatch:
+
+```text
+Animal parameter
+      │
+      ├── holds Cat object -> Cat.speak()
+      └── holds Dog object -> Dog.speak()
+```
+
+### Polymorphism in Go
+
+The Go idea is almost identical:
+
+```go
+type Animal interface {
+	Speak()
+}
+
+func makeItSpeak(animal Animal) {
+	animal.Speak()
+}
+
+type Cat struct {
+	name string
+}
+
+func (c *Cat) Speak() {
+	fmt.Printf("%s says meow!\n", c.name)
+}
+
+type Dog struct {
+	name string
+}
+
+func (d *Dog) Speak() {
+	fmt.Printf("%s says woof!\n", d.name)
+}
+```
+
+The important language difference is:
+
+- Java uses explicit implementation: `class Cat implements Animal`.
+- Go uses implicit implementation: having `Speak()` is enough to satisfy
+  `Animal`.
+
+An interface is also our first example of abstraction. The caller knows the
+simple action `speak()` but does not need to know how each animal produces its
+sound.
+
+## Lesson 6: Inheritance, shared state, and `super`
+
+Inheritance lets a child class receive state or behavior from a parent class.
+Java uses `extends`:
+
+```text
+Pet
+├── private name
+├── getName()
+└── sleep()
+    │
+    ├── Cat
+    │   ├── age
+    │   ├── speak()
+    │   └── haveBirthday()
+    │
+    └── Dog
+        └── speak()
+```
+
+The shared parent owns the duplicated name and sleeping behavior:
+
+```java
+class Pet {
+    private String name;
+
+    public Pet(String name) {
+        this.name = name;
+    }
+
+    protected String getName() {
+        return name;
+    }
+
+    public void sleep() {
+        System.out.println(name + " is sleeping.");
+    }
+}
+```
+
+`protected getName()` can be used by child classes such as `Cat` and `Dog`.
+Java also allows protected access from other classes in the same package.
+
+The child classes receive that behavior while still satisfying `Animal`:
+
+```java
+class Cat extends Pet implements Animal {
+    private int age;
+
+    public Cat(String name, int age) {
+        super(name);
+        this.age = age;
+    }
+
+    public void speak() {
+        System.out.println(
+            getName() + " is " + age + " years old and says meow!"
+        );
+    }
+}
+
+class Dog extends Pet implements Animal {
+    public Dog(String name) {
+        super(name);
+    }
+
+    public void speak() {
+        System.out.println(getName() + " says woof!");
+    }
+}
+```
+
+Read this declaration in two parts:
+
+```java
+class Cat extends Pet implements Animal
+```
+
+- `extends Pet`: Cat inherits implementation from one parent class.
+- `implements Animal`: Cat promises to provide an interface behavior.
+
+Java classes can extend only one class, but they can implement multiple
+interfaces.
+
+### How Java recognizes a constructor
+
+A constructor:
+
+1. Has exactly the same name as its class.
+2. Has no return type—not even `void`.
+
+```java
+class Pet {
+    public Pet(String name) { // constructor
+    }
+
+    public void Pet(String name) { // ordinary method, not a constructor
+    }
+}
+```
+
+Constructors can have different parameter lists:
+
+```java
+Pet()
+Pet(String name)
+Pet(String name, int age)
+```
+
+Java chooses the matching constructor from the number and types of arguments.
+
+### What `super(name)` means
+
+`super` refers to the direct parent part of the current object. Because `Cat`
+declares `extends Pet`, this line:
+
+```java
+super(name);
+```
+
+means:
+
+> Call the `Pet` constructor that accepts a `String`.
+
+Creating Milo follows this order:
+
+```text
+new Cat("Milo", 2)
+        │
+        ▼
+Cat constructor
+├── super("Milo")
+│       │
+│       ▼
+│   Pet(String) constructor starts
+│       │
+│       ▼
+│   Object() runs first as the ultimate parent
+│       │
+│       ▼
+│   Pet(String) stores name = "Milo"
+│
+└── this.age = 2
+
+Result: one Cat object
+├── inherited Pet part: name = "Milo"
+└── Cat-specific part: age = 2
+```
+
+`super(name)` does not create a separate `Pet`. It initializes the parent part
+of the same `Cat` object. A parent-constructor call must be the first statement
+in a child constructor.
+
+If no `super(...)` is written, Java tries to insert `super()` automatically.
+That would fail here because `Pet` has `Pet(String)`, not a zero-argument
+`Pet()` constructor.
+
+### `this` versus `super`
+
+| Java expression | Meaning |
+|---|---|
+| `this.age` | Use a member of this object |
+| `this(...)` | Call another constructor in the same class |
+| `super(name)` | Call a constructor in the direct parent class |
+| `super.sleep()` | Call the parent's implementation of a method |
+
+### Method overriding
+
+A child can replace inherited behavior with its own version. This is called
+overriding:
+
+```java
+class Cat extends Pet {
+    @Override
+    public void sleep() {
+        System.out.println(getName() + " curls up and sleeps.");
+    }
+}
+```
+
+`@Override` asks the compiler to verify that a matching parent or interface
+method really exists. Inside the replacement, the child can still call the
+parent version:
+
+```java
+@Override
+public void sleep() {
+    super.sleep();
+    System.out.println("The cat starts dreaming.");
+}
+```
+
+### Go uses composition and embedding instead
+
+Go does not have class inheritance or `super`. A Go type contains another value
+instead:
+
+```go
+type Pet struct {
+	name string
+}
+
+func NewPet(name string) Pet {
+	return Pet{name: name}
+}
+
+func (p Pet) Name() string {
+	return p.name
+}
+
+func (p Pet) Sleep() {
+	fmt.Printf("%s is sleeping.\n", p.name)
+}
+
+type Cat struct {
+	Pet
+	age int
+}
+
+func NewCat(name string, age int) *Cat {
+	return &Cat{
+		Pet: NewPet(name),
+		age: age,
+	}
+}
+```
+
+Embedding promotes the `Pet` methods, so this is convenient:
+
+```go
+milo := NewCat("Milo", 2)
+milo.Sleep()
+```
+
+But the model is different:
+
+```text
+Java inheritance: Cat is a Pet
+Go composition:    Cat contains a Pet
+```
+
+Go has no constructor chain. `NewCat` explicitly creates the embedded `Pet`
+with `NewPet(name)`. Go usually combines composition with interfaces instead of
+building deep inheritance trees.
+
 ## Java and Go connection
 
 | Java | Go | Meaning |
@@ -322,6 +685,9 @@ packages use only `NewCat`, `Meow`, and `HaveBirthday`.
 | `void meow()` | `func (c *Cat) Meow()` | Attach behavior to the data |
 | `private int age` | `age int` | Hide state from outside consumers |
 | `public void haveBirthday()` | `func (c *Cat) HaveBirthday()` | Expose safe behavior |
+| `implements Animal` | implicit interface satisfaction | Promise shared behavior |
+| `extends Pet` | embed `Pet` | Reuse state and behavior, with different semantics |
+| `super(name)` | `Pet: NewPet(name)` | Initialize the reused parent/component state |
 | `new Cat(...)` | `NewCat(...)` | Create a new value |
 
 Java puts fields, constructors, and methods inside the class. Go declares the
@@ -354,8 +720,9 @@ Compile the Java source:
 javac Main.java
 ```
 
-This produces `Main.class` and `Cat.class`. These are generated bytecode files,
-not source code, so do not edit or commit them.
+This produces `Main.class`, `Animal.class`, `Pet.class`, `Cat.class`, and
+`Dog.class`. These are generated bytecode files, not source code, so do not edit
+or commit them.
 
 Run the compiled `Main` class:
 
@@ -377,7 +744,7 @@ go run main.go
 
 `go run` performs the build and run steps for you.
 
-## Lessons 1–4 completion check
+## Lessons 1–6 completion check
 
 Before moving on, we should be able to explain:
 
@@ -394,6 +761,14 @@ Before moving on, we should be able to explain:
 - `public` exposes behavior that other code may use.
 - Encapsulation is controlled access, not getters and setters everywhere.
 - Go visibility is package-based rather than class-based.
+- An interface defines a shared behavior contract.
+- Java implements interfaces explicitly; Go satisfies them implicitly.
+- Polymorphism lets one interface call dispatch to different real objects.
+- `extends` inherits from a class; `implements` satisfies an interface.
+- Child objects can receive state and behavior from their parent class.
+- `super(...)` selects and calls a matching direct-parent constructor.
+- Parent construction happens before child-specific initialization.
+- Java uses inheritance; Go normally uses composition and embedding.
 
-Next: polymorphism—different objects responding to the same action in their
-own way.
+Next: composition and dependency injection—objects working together without
+becoming parent and child types.

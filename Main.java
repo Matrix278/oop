@@ -16,6 +16,9 @@ public class Main {
 
         makeItSpeak(milo);
         makeItSpeak(rex);
+
+        milo.sleep();
+        rex.sleep();
     }
 }
 
@@ -24,37 +27,51 @@ interface Animal {
     void speak();
 }
 
-class Cat implements Animal {
+class Cat extends Pet implements Animal {
 
-    private String name;
     private int age;
 
     public Cat(String name, int age) {
-        this.name = name;
+        super(name);
         this.age = age;
     }
 
     public void speak() {
-        System.out.println(name + " is " + age + " years old and says meow!");
+        System.out.println(getName() + " is " + age + " years old and says meow!");
     }
 
     public void haveBirthday() {
         age = age + 1;
 
-        System.out.println(name + " is now " + age + " years old!");
+        System.out.println(getName() + " is now " + age + " years old!");
     }
 
 }
 
-class Dog implements Animal {
-
-    private String name;
+class Dog extends Pet implements Animal {
 
     public Dog(String name) {
-        this.name = name;
+        super(name);
     }
 
     public void speak() {
-        System.out.println(name + " says woof!");
+        System.out.println(getName() + " says woof!");
+    }
+}
+
+class Pet {
+
+    private String name;
+
+    public Pet(String name) {
+        this.name = name;
+    }
+
+    protected String getName() {
+        return name;
+    }
+
+    public void sleep() {
+        System.out.println(name + " is sleeping.");
     }
 }
